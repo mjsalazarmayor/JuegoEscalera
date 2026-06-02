@@ -1,20 +1,23 @@
 
+import logica.Tablero;
+import logica.Turnos;
+import modelo.Jugador;
+
 public class App {
 
     public static void main(String[] args) throws Exception {
 
-        ListaDoble tablero = new ListaDoble();
+        Tablero tablero = new Tablero();
+        tablero.mostrar();
 
-        tablero.insertarAlFinal(new Casilla(1, "NORMAL", 0));
-        tablero.insertarAlFinal(new Casilla(2, "NORMAL", 0));
-        tablero.insertarAlFinal(new Casilla(3, "ESCALERA", 10));
-        tablero.insertarAlFinal(new Casilla(4, "NORMAL", 0));
-        tablero.insertarAlFinal(new Casilla(5, "SERPIENTE", 2));
+        Turnos turnos = new Turnos();
+        turnos.agregarJugador(new Jugador("Julian"));
+        turnos.agregarJugador(new Jugador("Maria Jose"));
+        turnos.agregarJugador(new Jugador("Eddie"));
 
-        System.out.println("=== Desde el primero ===");
-        tablero.mostrarDesdePrimero();
-
-        System.out.println("\n=== Desde el último ===");
-        tablero.mostrarDesdeUltimo();
+        for (int i = 0; i < 5; i++) {
+            Jugador j = turnos.siguienteTurno();
+            System.out.println("Turno " + (i + 1) + ": " + j.getNombreUsuario());
+        }
     }
 }
