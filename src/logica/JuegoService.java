@@ -22,7 +22,7 @@ public class JuegoService {
     private final Scanner scanner;
 
     private static final String[] CATEGORIAS = {
-        "Matematicas", "Geografia", "Literatura", "Deportes", "Entretenimiento"
+            "Matematicas", "Geografia", "Literatura", "Deportes", "Entretenimiento"
     };
 
     public JuegoService() {
@@ -47,15 +47,21 @@ public class JuegoService {
     }
 
     private void registrarJugadorReal() {
-        System.out.print("\nIngresa tu nombre: ");
-        String nombre = scanner.nextLine().trim();
+        String nombre = "";
+        while (!Validador.nombreValido(nombre)) {
+            System.out.print("\nIngresa tu nombre: ");
+            nombre = scanner.nextLine();
+            if (!Validador.nombreValido(nombre)) {
+                System.out.println(Validador.mensajeNombre(nombre));
+            }
+        }
         Jugador jugador = new Jugador(nombre);
         turnos.encolarJugador(jugador);
         tabla.insertar(jugador);
     }
 
     private void generarBots(int cantidad) {
-        String[] nombres = {"Bot-Julian", "Bot-Eddie", "Bot-Daniela", "Bot-Sebastian"};
+        String[] nombres = { "Bot-Julian", "Bot-Eddie", "Bot-Daniela", "Bot-Sebastian" };
         for (int i = 0; i < cantidad; i++) {
             Jugador bot = new Jugador(nombres[i]);
             turnos.encolarJugador(bot);
@@ -94,7 +100,7 @@ public class JuegoService {
             Casilla casilla = tablero.buscarPorNumero(nuevaPos);
             boolean turnoExtra = procesarCasilla(jugador, casilla, esBot);
 
-            if (Reglas.esGanador(jugador.getPosicion(),tablero.getTotalCasillas())) {
+            if (Reglas.esGanador(jugador.getPosicion(), tablero.getTotalCasillas())) {
                 ganador = jugador.getNombreUsuario();
                 break;
             }
@@ -162,7 +168,7 @@ public class JuegoService {
     private boolean procesarReto(Jugador jugador, boolean esBot) {
         System.out.println("¡RETO!");
         String categoria = elegirCategoria(esBot);
-        int nivel = Reglas.calcularNivel(jugador.getPosicion(),tablero.getTotalCasillas());
+        int nivel = Reglas.calcularNivel(jugador.getPosicion(), tablero.getTotalCasillas());
         Pregunta pregunta = arbol.buscar(nivel, categoria);
 
         if (pregunta == null) {
@@ -176,35 +182,30 @@ public class JuegoService {
     // -------------------------------------------------------
     // Reto
     // -------------------------------------------------------
+
     private String elegirCategoria(boolean esBot) {
         if (esBot) {
             String cat = CATEGORIAS[random.nextInt(CATEGORIAS.length)];
             System.out.println("El bot eligio: " + cat);
             return cat;
         }
-
         System.out.println("Elige una categoria:");
         for (int i = 0; i < CATEGORIAS.length; i++) {
-            System.out.println("  " + (i + 1) + ". " + CATEGORIAS[i]);
+            System.out.println(" " + (i + 1) + ". " + CATEGORIAS[i]);
         }
-        System.out.print("Opcion: ");
-
-        int opcion;
-        try {
-            opcion = Integer.parseInt(scanner.nextLine().trim());
-        } catch (NumberFormatException e) {
-            opcion = 1;
+        String entrada = "";
+        while (!Validador.opcionValida(entrada, 1, CATEGORIAS.length)) {
+            System.out.print("Opcion: ");
+            entrada = scanner.nextLine();
+            if (!Validador.opcionValida(entrada, 1, CATEGORIAS.length)) {
+                System.out.println("Opcion invalida. Ingresa un numero entre 1 y " + CATEGORIAS.length + ".");
+            }
         }
-
-        if (opcion < 1 || opcion > CATEGORIAS.length) {
-            opcion = 1;
-        }
-        return CATEGORIAS[opcion - 1];
+        return CATEGORIAS[Integer.parseInt(entrada.trim()) - 1];
     }
 
     private boolean evaluarRespuesta(Jugador jugador, Pregunta pregunta, boolean esBot) {
-        System.out.println("\n[" + pregunta.getCategoria()
-                + " - Nivel " + pregunta.getDificultad() + "]");
+        System.out.println("\n[" + pregunta.getCategoria() + " - Nivel " + pregunta.getDificultad() + "]");
         System.out.println("Pregunta: " + pregunta.getEnunciado());
 
         String respuesta;
@@ -213,8 +214,14 @@ public class JuegoService {
             respuesta = acierta ? pregunta.getRespuesta() : "no se";
             System.out.println("El bot responde: " + respuesta);
         } else {
-            System.out.print("Tu respuesta: ");
-            respuesta = scanner.nextLine();
+            respuesta = "";
+            while (!Validador.respuestaValida(respuesta)) {
+                System.out.print("Tu respuesta: ");
+                respuesta = scanner.nextLine();
+                if (!Validador.respuestaValida(respuesta)) {
+                    System.out.println("La respuesta no puede estar vacia.");
+                }
+            }
         }
 
         if (arbol.validar(pregunta, respuesta)) {
@@ -222,8 +229,7 @@ public class JuegoService {
             jugador.setAciertos(jugador.getAciertos() + 1);
             return true;
         } else {
-            System.out.println("Incorrecto. La respuesta era: "
-                    + pregunta.getRespuesta());
+            System.out.println("Incorrecto. La respuesta era: " + pregunta.getRespuesta());
             System.out.println("Pierdes tu turno.");
             jugador.setFallos(jugador.getFallos() + 1);
             turnos.siguienteTurno();
