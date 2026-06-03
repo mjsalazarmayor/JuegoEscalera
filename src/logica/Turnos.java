@@ -15,10 +15,6 @@ public class Turnos {
         cola.encolar(jugador);
     }
 
-    public void agregarJugador(Jugador jugador) {
-        cola.encolar(jugador);
-    }
-    
     public Jugador siguienteTurno() {
         Jugador actual = cola.desencolar();
         cola.encolar(actual);
@@ -34,7 +30,7 @@ public class Turnos {
     }
 
     public int cantidadJugadores() {
-        return cola.getTamaño();
+        return cola.getTamanio();
     }
 
 }

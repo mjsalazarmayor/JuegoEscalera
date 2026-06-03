@@ -1,22 +1,25 @@
 package logica;
 
+import estructuras.Grafo;
 import estructuras.ListaDoble;
 import java.util.Random;
 import modelo.Casilla;
 
 public class Tablero {
 
-    private static final int TOTAL_CASILLAS = 20;
-    private static final int ESCALERAS = 3;
-    private static final int SERPIENTES = 2;
-    private static final int RETOS = 3;
+    private static final int TOTAL_CASILLAS = 50;
+    private static final int ESCALERAS = 5;
+    private static final int SERPIENTES = 4;
+    private static final int RETOS = 5;
 
     private final ListaDoble<Casilla> lista;
+    private Grafo grafo;
     private final Random random;
 
     public Tablero() {
         this.lista = new ListaDoble<>();
         this.random = new Random();
+        this.grafo = new Grafo(TOTAL_CASILLAS);
         crearTablero();
     }
 
@@ -34,8 +37,8 @@ public class Tablero {
         colocarCasillasEspeciales("SERPIENTE", SERPIENTES, false, usada);
         colocarRetos(usada);
     }
-    // coloca escaleras o serpientes de forma aleatoria
 
+    // coloca escaleras o serpientes de forma aleatoria
     private void colocarCasillasEspeciales(String tipo, int cantidad, boolean sube, boolean[] usada) {
         int contador = 0;
         int intentos = 0;
@@ -61,6 +64,7 @@ public class Tablero {
                 }
                 c.setTipo(tipo);
                 c.setDestino(destino);
+                grafo.agregarArista(origen, destino);
                 usada[origen] = true;
                 usada[destino] = true;
                 contador++;
@@ -82,7 +86,7 @@ public class Tablero {
 
     // buscar casilla
     public Casilla buscarPorNumero(int numero) {
-        for (int i = 0; i < lista.getTamaño(); i++) {
+        for (int i = 0; i < lista.getTamanio(); i++) {
             Casilla c = lista.buscarPorIndice(i);
             if (c.getNumero() == numero) {
                 return c;
@@ -97,6 +101,14 @@ public class Tablero {
 
     public ListaDoble<Casilla> getLista() {
         return lista;
+    }
+
+    public Grafo getGrafo() {
+        return grafo;
+    }
+
+    public static int getTotalCasillas() {
+        return TOTAL_CASILLAS;
     }
 
     // mostrar tablero
@@ -119,8 +131,8 @@ public class Tablero {
         }
         System.out.println("=============================");
         System.out.println("E=Escalera  S=Serpiente  R=Reto  .=Normal");
-        System.out.println();
-        mostrarConexiones();
+        // System.out.println();
+        // mostrarConexiones();
     }
 
     // un solo método reutilizable para el símbolo

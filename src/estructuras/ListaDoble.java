@@ -16,7 +16,7 @@ public class ListaDoble<Tipo> {
         return cabecera == null;
     }
 
-    public int getTamaño() {
+    public int getTamanio() {
         return tamaño;
     }
 
