@@ -154,22 +154,40 @@
   </div>
 </div>
 
-<!-- MODAL RETO -->
+<!-- ✅ MODAL RETO CORREGIDO - CON DOS PASOS -->
 <div id="modal-reto" class="modal hidden">
   <div class="modal-reto-card">
-    <div class="reto-header">
-      <div class="reto-icono-big"><i class="fas fa-question-circle"></i></div>
-      <div class="reto-meta">
-        <span class="reto-tag cat" id="reto-cat"></span>
-        <span class="reto-tag niv" id="reto-nivel"></span>
+    
+    <!-- PASO 1: Elegir categoría -->
+    <div id="reto-step-categoria">
+      <div class="reto-header">
+        <div class="reto-icono-big"><i class="fas fa-list-ul"></i></div>
+        <div class="reto-meta">
+          <span class="reto-tag cat" style="background:#7c3aed">RETO</span>
+        </div>
+        <div class="reto-jugador" id="reto-jugador-label-cat"></div>
       </div>
-      <div class="reto-jugador" id="reto-jugador-label"></div>
+      <p class="reto-pregunta" style="text-align:center;font-size:1.1rem">Elige una categoría:</p>
+      <div id="categoria-btns" class="categoria-btns-grid"></div>
     </div>
-    <p id="reto-pregunta" class="reto-pregunta"></p>
-    <div class="reto-inp-row">
-      <input id="reto-respuesta" type="text" placeholder="Tu respuesta..."/>
-      <button id="btn-responder">Responder</button>
+    
+    <!-- PASO 2: Responder pregunta -->
+    <div id="reto-step-pregunta" class="hidden">
+      <div class="reto-header">
+        <div class="reto-icono-big"><i class="fas fa-question-circle"></i></div>
+        <div class="reto-meta">
+          <span class="reto-tag cat" id="reto-cat"></span>
+          <span class="reto-tag niv" id="reto-nivel"></span>
+        </div>
+        <div class="reto-jugador" id="reto-jugador-label"></div>
+      </div>
+      <p id="reto-pregunta" class="reto-pregunta"></p>
+      <div class="reto-inp-row">
+        <input id="reto-respuesta" type="text" placeholder="Tu respuesta..."/>
+        <button id="btn-responder">Responder</button>
+      </div>
     </div>
+    
   </div>
 </div>
 

@@ -18,18 +18,6 @@ import estructuras.ArbolBST;
 import estructuras.Pila;
 import estructuras.TablaHash;
 
-/**
- * Servidor HTTP embebido que expone el JuegoEscalera como una API REST JSON.
- *
- * Endpoints:
- *   POST /api/iniciar     { "jugadores": ["Ana","Bob"], "bots": 2 }
- *   GET  /api/estado
- *   POST /api/tirar       — procesa SOLO el turno actual (humano o bot)
- *   POST /api/responder   { "respuesta": "42" }
- *   GET  /api/historial
- *   GET  /api/ranking
- *   POST /api/reiniciar
- */
 public class GameServer {
 
     private static final int PORT = 8080;
@@ -39,39 +27,40 @@ public class GameServer {
     private static Turnos       turnos;
     private static TablaHash    tabla;
     private static Pila<String> historial;
-    private static ArbolBST     arbol;
+    private static ArbolBST     arbol = new ArbolBST();
     private static Random       random  = new Random();
     private static boolean      juegoIniciado      = false;
     private static String       ganador            = null;
     private static Pregunta     preguntaActual     = null;
     private static boolean      esperandoRespuesta = false;
+    private static boolean      esperandoCategoria = false;
+    private static int          nivelRetoActual    = 1;
     private static String       jugadorEnReto      = null;
     private static Set<String>  nombresHumanos     = new HashSet<>();
 
-    // ── Último movimiento (para el frontend) ───────────────────────────
+    // ── Último movimiento ───────────────────────────────────────────
     private static int    ultimoDado       = 0;
     private static String ultimoJugador    = null;
     private static int    ultimoDesde      = 0;
     private static int    ultimoHasta      = 0;
-    private static String ultimoEvento     = "normal"; // normal | escalera | serpiente
+    private static String ultimoEvento     = "normal";
 
     private static final String[] CATEGORIAS = {
         "Matematicas", "Geografia", "Literatura", "Deportes", "Entretenimiento"
     };
 
-    // ────────────────────────────────────────────────────────────────────
-
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
-        server.createContext("/api/iniciar",   new IniciarHandler());
-        server.createContext("/api/estado",    new EstadoHandler());
-        server.createContext("/api/tirar",     new TirarHandler());
-        server.createContext("/api/responder", new ResponderHandler());
-        server.createContext("/api/historial", new HistorialHandler());
-        server.createContext("/api/ranking",   new RankingHandler());
-        server.createContext("/api/reiniciar", new ReiniciarHandler());
-        server.createContext("/",              new StaticHandler());
+        server.createContext("/api/iniciar",          new IniciarHandler());
+        server.createContext("/api/estado",           new EstadoHandler());
+        server.createContext("/api/tirar",            new TirarHandler());
+        server.createContext("/api/elegir-categoria", new ElegirCategoriaHandler());
+        server.createContext("/api/responder",        new ResponderHandler());
+        server.createContext("/api/historial",        new HistorialHandler());
+        server.createContext("/api/ranking",          new RankingHandler());
+        server.createContext("/api/reiniciar",        new ReiniciarHandler());
+        server.createContext("/",                     new StaticHandler());
 
         server.setExecutor(null);
         server.start();
@@ -83,12 +72,6 @@ public class GameServer {
     //  Handlers
     // ════════════════════════════════════════════════════════════════════
 
-    /**
-     * POST /api/iniciar
-     * Body: { "jugadores": ["Ana","Bob"], "bots": 2 }
-     * jugadores: 1..4 nombres de humanos
-     * bots: número de bots (0 .. 4-cantHumanos)
-     */
     static class IniciarHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -98,10 +81,8 @@ public class GameServer {
 
             String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
 
-            // Parsear array "jugadores"
             List<String> nombresJugadores = extraerArrayStrings(body, "jugadores");
             if (nombresJugadores.isEmpty()) {
-                // Compatibilidad: campo "nombre" antiguo
                 String nombre = extraerCampo(body, "nombre");
                 if (nombre != null && !nombre.isBlank()) nombresJugadores.add(nombre.trim());
             }
@@ -114,12 +95,9 @@ public class GameServer {
             if (botsStr != null) {
                 try { bots = Integer.parseInt(botsStr.trim()); } catch (NumberFormatException ignored) {}
             }
-            // Si no se especificó bots, completar hasta 5 participantes total
             if (botsStr == null) {
                 bots = Math.max(0, 5 - nombresJugadores.size());
             }
-            bots = Math.min(bots, 4 - nombresJugadores.size() + (4 - nombresJugadores.size()));
-            bots = Math.max(0, Math.min(bots, 4));
 
             // (Re)inicializar estado
             tablero            = new Tablero();
@@ -130,10 +108,13 @@ public class GameServer {
             ganador            = null;
             preguntaActual     = null;
             esperandoRespuesta = false;
+            esperandoCategoria = false;
+            nivelRetoActual    = 1;
             jugadorEnReto      = null;
             nombresHumanos     = new HashSet<>();
 
-            // Registrar jugadores humanos
+            System.out.println("📚 Preguntas cargadas en el árbol");
+
             for (String n : nombresJugadores) {
                 Jugador j = new Jugador(n.trim());
                 turnos.encolarJugador(j);
@@ -141,7 +122,6 @@ public class GameServer {
                 nombresHumanos.add(n.trim());
             }
 
-            // Registrar bots
             String[] botNames = { "Bot-Julian", "Bot-Eddie", "Bot-Daniela", "Bot-Sebastian" };
             for (int i = 0; i < bots && i < botNames.length; i++) {
                 Jugador bot = new Jugador(botNames[i]);
@@ -154,7 +134,6 @@ public class GameServer {
         }
     }
 
-    /** GET /api/estado */
     static class EstadoHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -165,20 +144,14 @@ public class GameServer {
         }
     }
 
-    /**
-     * POST /api/tirar
-     * Procesa UN SOLO turno: el del jugador actual.
-     * Si es bot → resuelve su turno y retorna (el frontend llama de nuevo para el siguiente).
-     * Si es humano → tira el dado, aplica movimiento y retorna.
-     * Si hay reto para humano → retorna con esperandoRespuesta=true.
-     */
     static class TirarHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
             addCors(ex);
             if (ex.getRequestMethod().equalsIgnoreCase("OPTIONS")) { ex.sendResponseHeaders(204,-1); return; }
             if (!juegoIniciado || ganador != null) { sendError(ex, 400, "Juego no activo"); return; }
-            if (esperandoRespuesta)               { sendError(ex, 400, "Hay un reto pendiente"); return; }
+            if (esperandoRespuesta) { sendError(ex, 400, "Hay un reto pendiente"); return; }
+            if (esperandoCategoria) { sendError(ex, 400, "Esperando elección de categoría"); return; }
 
             Jugador jugador = turnos.jugadorActual();
             procesarTurnoJugador(jugador, esBot(jugador));
@@ -187,7 +160,35 @@ public class GameServer {
         }
     }
 
-    /** POST /api/responder { "respuesta": "42" } */
+    static class ElegirCategoriaHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange ex) throws IOException {
+            addCors(ex);
+            if (ex.getRequestMethod().equalsIgnoreCase("OPTIONS")) { ex.sendResponseHeaders(204,-1); return; }
+            if (!esperandoCategoria) { sendError(ex, 400, "No hay reto esperando categoría"); return; }
+
+            String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            String cat  = extraerCampo(body, "categoria");
+            if (cat == null || cat.isBlank()) { sendError(ex, 400, "Falta el campo 'categoria'"); return; }
+
+            Pregunta p = arbol.buscar(nivelRetoActual, cat.trim());
+            if (p == null) {
+                esperandoCategoria = false;
+                jugadorEnReto = null;
+                turnos.siguienteTurno();
+                historial.apilar("❓ Sin pregunta de " + cat + " para nivel " + nivelRetoActual + ". Turno saltado.");
+                sendJson(ex, 200, estadoJson());
+                return;
+            }
+
+            preguntaActual     = p;
+            esperandoRespuesta = true;
+            esperandoCategoria = false;
+            historial.apilar("❓ RETO para " + jugadorEnReto + ": [" + p.getCategoria() + " Niv." + p.getDificultad() + "]");
+            sendJson(ex, 200, estadoJson());
+        }
+    }
+
     static class ResponderHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -201,14 +202,20 @@ public class GameServer {
 
             boolean correcto = arbol.validar(preguntaActual, resp != null ? resp : "");
             String evento;
+
             if (correcto) {
                 jugador.setAciertos(jugador.getAciertos() + 1);
                 evento = "correcto";
-                // turno extra: NO avanzamos el turno
+                // ✅ CORRECTO: NO avanzar turno — el jugador repite
+                historial.apilar("✅ " + jugador.getNombreUsuario() + " acertó! Tendrá otro turno.");
+                System.out.println("🔁 " + jugador.getNombreUsuario() + " ACERTÓ - REPITE TURNO");
             } else {
                 jugador.setFallos(jugador.getFallos() + 1);
                 evento = "incorrecto";
-                turnos.siguienteTurno(); // pierde turno
+                // ✅ INCORRECTO: avanzar al siguiente jugador
+                turnos.siguienteTurno();
+                historial.apilar("❌ " + jugador.getNombreUsuario() + " falló. Pierde turno.");
+                System.out.println("➡️ " + jugador.getNombreUsuario() + " FALLÓ - Avanza turno");
             }
 
             esperandoRespuesta = false;
@@ -225,7 +232,6 @@ public class GameServer {
         }
     }
 
-    /** GET /api/historial */
     static class HistorialHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -235,7 +241,6 @@ public class GameServer {
         }
     }
 
-    /** GET /api/ranking */
     static class RankingHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -245,19 +250,21 @@ public class GameServer {
         }
     }
 
-    /** POST /api/reiniciar */
     static class ReiniciarHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
             addCors(ex);
             juegoIniciado = false;
             ganador = null;
+            esperandoRespuesta = false;
+            esperandoCategoria = false;
+            jugadorEnReto = null;
+            preguntaActual = null;
             ultimoDado = 0; ultimoJugador = null; ultimoDesde = 0; ultimoHasta = 0; ultimoEvento = "normal";
             sendJson(ex, 200, "{ \"ok\": true }");
         }
     }
 
-    /** Sirve archivos estáticos desde web/ */
     static class StaticHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange ex) throws IOException {
@@ -294,7 +301,6 @@ public class GameServer {
         int dado = random.nextInt(6) + 1;
         historial.apilar(jugador.getNombreUsuario() + " sacó " + dado);
 
-        // Registrar movimiento para el frontend
         ultimoDado    = dado;
         ultimoJugador = jugador.getNombreUsuario();
         ultimoEvento  = "normal";
@@ -321,8 +327,13 @@ public class GameServer {
             return;
         }
 
-        if (!turnoExtra && !esperandoRespuesta) {
+        if (turnoExtra) {
+            System.out.println("🔁 Turno extra para: " + jugador.getNombreUsuario() + " - NO se avanza");
+        } else if (esperandoRespuesta || esperandoCategoria) {
+            System.out.println("⏸️ Esperando respuesta/categoría - NO se avanza turno");
+        } else {
             turnos.siguienteTurno();
+            System.out.println("➡️ Avanzando turno a: " + turnos.jugadorActual().getNombreUsuario());
         }
     }
 
@@ -331,7 +342,7 @@ public class GameServer {
             case "ESCALERA" -> {
                 int dest = tablero.getGrafo().obtenerDestino(casilla.getNumero());
                 jugador.setPosicion(dest);
-                ultimoDesde  = casilla.getNumero(); // casilla de inicio de escalera
+                ultimoDesde  = casilla.getNumero();
                 ultimoHasta  = dest;
                 ultimoEvento = "escalera";
                 historial.apilar("🪜 ¡Escalera! " + jugador.getNombreUsuario() + " sube a " + dest);
@@ -340,7 +351,7 @@ public class GameServer {
             case "SERPIENTE" -> {
                 int dest = tablero.getGrafo().obtenerDestino(casilla.getNumero());
                 jugador.setPosicion(dest);
-                ultimoDesde  = casilla.getNumero(); // casilla de la cabeza de serpiente
+                ultimoDesde  = casilla.getNumero();
                 ultimoHasta  = dest;
                 ultimoEvento = "serpiente";
                 historial.apilar("🐍 ¡Serpiente! " + jugador.getNombreUsuario() + " baja a " + dest);
@@ -348,29 +359,37 @@ public class GameServer {
             }
             case "RETO" -> {
                 int nivel = Reglas.calcularNivel(jugador.getPosicion(), tablero.getTotalCasillas());
-                String cat = CATEGORIAS[random.nextInt(CATEGORIAS.length)];
-                Pregunta p = arbol.buscar(nivel, cat);
-                if (p == null) {
-                    historial.apilar("❓ Reto sin pregunta para " + jugador.getNombreUsuario());
-                    yield false;
-                }
+                System.out.println("DEBUG: RETO - Jugador: " + jugador.getNombreUsuario() + ", Nivel: " + nivel + ", Bot: " + bot);
+
                 if (bot) {
+                    String cat = CATEGORIAS[random.nextInt(CATEGORIAS.length)];
+                    Pregunta p = arbol.buscar(nivel, cat);
+                    historial.apilar("🤖 " + jugador.getNombreUsuario() + " eligió categoría: " + cat);
+
+                    if (p == null) {
+                        historial.apilar("❓ Reto sin pregunta para " + jugador.getNombreUsuario());
+                        yield false;
+                    }
+
                     boolean acierta = random.nextBoolean();
                     if (acierta) {
                         jugador.setAciertos(jugador.getAciertos() + 1);
-                        historial.apilar("🤖 " + jugador.getNombreUsuario() + " respondió CORRECTO");
+                        historial.apilar("🤖 " + jugador.getNombreUsuario() + " [" + cat + "] respondió CORRECTO → turno extra");
+                        System.out.println("🔁 BOT acertó - turno extra");
                         yield true;
                     } else {
                         jugador.setFallos(jugador.getFallos() + 1);
-                        historial.apilar("🤖 " + jugador.getNombreUsuario() + " respondió MAL");
-                        turnos.siguienteTurno();
+                        historial.apilar("🤖 " + jugador.getNombreUsuario() + " [" + cat + "] respondió MAL → pierde turno");
+                        System.out.println("➡️ BOT falló - pierde turno");
                         yield false;
                     }
                 } else {
-                    preguntaActual     = p;
-                    esperandoRespuesta = true;
+                    nivelRetoActual    = nivel;
+                    esperandoCategoria = true;
                     jugadorEnReto      = jugador.getNombreUsuario();
-                    historial.apilar("❓ RETO para " + jugador.getNombreUsuario() + ": [" + p.getCategoria() + " Niv." + p.getDificultad() + "]");
+                    preguntaActual     = null;
+                    historial.apilar("❓ RETO para " + jugador.getNombreUsuario() + " (nivel " + nivel + ") – elige categoría");
+                    System.out.println("❓ Humano en RETO - esperandoCategoria=true");
                     yield false;
                 }
             }
@@ -393,6 +412,10 @@ public class GameServer {
         sb.append("\"turnoActual\": ").append(jsonStr(actual.getNombreUsuario())).append(",");
         sb.append("\"esBot\": ").append(esBot(actual)).append(",");
         sb.append("\"esperandoRespuesta\": ").append(esperandoRespuesta).append(",");
+        sb.append("\"esperandoCategoria\": ").append(esperandoCategoria).append(",");
+        if (esperandoCategoria) {
+            sb.append("\"nivelReto\": ").append(nivelRetoActual).append(",");
+        }
         if (esperandoRespuesta && preguntaActual != null) {
             sb.append("\"reto\": {");
             sb.append("\"enunciado\": ").append(jsonStr(preguntaActual.getEnunciado())).append(",");
@@ -402,7 +425,6 @@ public class GameServer {
         } else {
             sb.append("\"reto\": null,");
         }
-        // Lista de nombres humanos
         sb.append("\"humanos\": [");
         String[] hArr = nombresHumanos.toArray(new String[0]);
         for (int i = 0; i < hArr.length; i++) {
@@ -440,11 +462,7 @@ public class GameServer {
     }
 
     private static String jugadoresJson() {
-        int cant = turnos.cantidadJugadores();
-        List<Jugador> lista = new ArrayList<>();
-        for (int i = 0; i < cant; i++) {
-            lista.add(turnos.siguienteTurno());
-        }
+        List<Jugador> lista = turnos.getTodosJugadores();
         StringBuilder sb = new StringBuilder("[");
         for (int i = 0; i < lista.size(); i++) {
             Jugador j = lista.get(i);
@@ -479,9 +497,7 @@ public class GameServer {
     }
 
     private static String rankingJson() {
-        int cant = turnos.cantidadJugadores();
-        List<Jugador> lista = new ArrayList<>();
-        for (int i = 0; i < cant; i++) lista.add(turnos.siguienteTurno());
+        List<Jugador> lista = turnos.getTodosJugadores();
         lista.sort((a, b) -> {
             int d = b.getPosicion() - a.getPosicion();
             return d != 0 ? d : b.getAciertos() - a.getAciertos();
@@ -535,10 +551,8 @@ public class GameServer {
         if (idx < 0) return null;
         int colon = json.indexOf(":", idx + key.length());
         if (colon < 0) return null;
-        // Valor numérico (sin comillas)
         String rest = json.substring(colon + 1).trim();
         if (!rest.startsWith("\"")) {
-            // número u otro valor primitivo
             int end = rest.indexOf(',');
             if (end < 0) end = rest.indexOf('}');
             if (end < 0) end = rest.length();
@@ -551,7 +565,6 @@ public class GameServer {
         return json.substring(q1 + 1, q2);
     }
 
-    /** Extrae un array de strings JSON: ["a","b","c"] del campo dado */
     private static List<String> extraerArrayStrings(String json, String campo) {
         List<String> result = new ArrayList<>();
         String key = "\"" + campo + "\"";
@@ -562,7 +575,6 @@ public class GameServer {
         int arrEnd = json.indexOf("]", arrStart);
         if (arrEnd < 0) return result;
         String arr = json.substring(arrStart + 1, arrEnd);
-        // Parsear strings del array
         int pos = 0;
         while (pos < arr.length()) {
             int q1 = arr.indexOf("\"", pos);
@@ -577,9 +589,8 @@ public class GameServer {
     }
 
     private static Jugador buscarJugadorPorNombre(String nombre) {
-        int cant = turnos.cantidadJugadores();
-        for (int i = 0; i < cant; i++) {
-            Jugador j = turnos.siguienteTurno();
+        List<Jugador> lista = turnos.getTodosJugadores();
+        for (Jugador j : lista) {
             if (j.getNombreUsuario().equals(nombre)) return j;
         }
         return null;

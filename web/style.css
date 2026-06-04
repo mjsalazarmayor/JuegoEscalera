@@ -1382,3 +1382,42 @@ html, body {
   from { opacity: 0.7; }
   to   { opacity: 1;   }
 }
+
+
+/* Modal de categorías */
+.categoria-btns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+    padding: 0 20px;
+}
+
+.categoria-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.categoria-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.categoria-btn:disabled {
+    opacity: 0.6;
+    transform: none;
+    cursor: not-allowed;
+}
+
+/* Ocultar elementos */
+.hidden {
+    display: none !important;
+}

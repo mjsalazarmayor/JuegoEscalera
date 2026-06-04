@@ -1,36 +1,43 @@
 package logica;
 
-import estructuras.Cola;
+import java.util.ArrayList;
+import java.util.List;
 import modelo.Jugador;
 
 public class Turnos {
 
-    private final Cola<Jugador> cola;
+    private final List<Jugador> jugadores;
+    private int indiceActual;
 
     public Turnos() {
-        this.cola = new Cola<>();
+        this.jugadores = new ArrayList<>();
+        this.indiceActual = 0;
     }
 
     public void encolarJugador(Jugador jugador) {
-        cola.encolar(jugador);
+        jugadores.add(jugador);
     }
 
     public Jugador siguienteTurno() {
-        Jugador actual = cola.desencolar();
-        cola.encolar(actual);
-        return actual;
+        if (jugadores.isEmpty()) return null;
+        indiceActual = (indiceActual + 1) % jugadores.size();
+        return jugadores.get(indiceActual);
     }
 
     public Jugador jugadorActual() {
-        return cola.verPrimero();
+        if (jugadores.isEmpty()) return null;
+        return jugadores.get(indiceActual);
     }
 
     public boolean hayJugadores() {
-        return !cola.esVacia();
+        return !jugadores.isEmpty();
     }
 
     public int cantidadJugadores() {
-        return cola.getTamanio();
+        return jugadores.size();
     }
-
+    
+    public List<Jugador> getTodosJugadores() {
+        return new ArrayList<>(jugadores);
+    }
 }
