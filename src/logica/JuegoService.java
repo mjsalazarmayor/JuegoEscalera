@@ -6,7 +6,7 @@ import estructuras.Pila;
 import estructuras.TablaHash;
 import java.util.Random;
 import java.util.Scanner;
-import modelo.Casilla;
+import modelo.Casilla; 
 import modelo.Jugador;
 import modelo.Pregunta;
 import ordenamiento.MergeSort;

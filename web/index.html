@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Serpientes & Escaleras</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══ PANTALLA INICIO ══ -->
+<div id="screen-inicio" class="screen active">
+  <div class="inicio-particles" id="particles"></div>
+  <div class="inicio-glow"></div>
+
+  <div class="inicio-card">
+    <div class="titulo-area">
+      <div class="dado-logo">
+        <div class="dado-face">
+          <span class="dot d1"></span><span class="dot d2"></span>
+          <span class="dot d3"></span><span class="dot d4"></span>
+          <span class="dot d5"></span><span class="dot d6"></span>
+        </div>
+      </div>
+      <h1 class="titulo">SERPIENTES<br><em>&amp;</em> ESCALERAS</h1>
+      <p class="subtitulo">Responde · Sube · Gana</p>
+    </div>
+
+    <div class="config-box">
+      <div class="config-row">
+        <span class="cfg-label"><i class="fas fa-users"></i> Jugadores humanos</span>
+        <div class="cnt-group">
+          <button class="cnt-btn active" data-count="1">1</button>
+          <button class="cnt-btn" data-count="2">2</button>
+          <button class="cnt-btn" data-count="3">3</button>
+          <button class="cnt-btn" data-count="4">4</button>
+        </div>
+      </div>
+
+      <div id="jugadores-inputs"></div>
+
+      <div class="config-row bots-row">
+        <span class="cfg-label"><i class="fas fa-robot"></i> Bots</span>
+        <select id="bots-select" class="sel-bots"></select>
+      </div>
+    </div>
+
+    <button id="btn-iniciar" class="btn-play">
+      <span class="btn-play-text">¡JUGAR!</span>
+      <span class="btn-play-arrow"><i class="fas fa-arrow-right"></i></span>
+    </button>
+
+    <div class="leyenda-strip">
+      <div class="ley-item"><span><i class="fas fa-stairs"></i></span><b>Escalera</b> sube</div>
+      <div class="ley-sep"></div>
+      <div class="ley-item"><span><i class="fas fa-snake"></i></span><b>Serpiente</b> baja</div>
+      <div class="ley-sep"></div>
+      <div class="ley-item"><span><i class="fas fa-question-circle"></i></span><b>Reto</b> turno extra</div>
+      <div class="ley-sep"></div>
+      <div class="ley-item"><span><i class="fas fa-flag-checkered"></i></span><b>Meta</b> casilla 50</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA JUEGO ══ -->
+<div id="screen-juego" class="screen">
+
+  <!-- BANNER TURNO (enorme, dramático) -->
+  <div id="turno-banner" class="turno-banner hidden">
+    <div class="turno-banner-inner">
+      <div class="turno-banner-tag" id="turno-tag">TURNO DE</div>
+      <div class="turno-banner-nombre" id="turno-nombre">—</div>
+      <div class="turno-banner-sub" id="turno-sub">Presiona el dado para tirar</div>
+    </div>
+  </div>
+
+  <!-- Header compacto -->
+  <header id="hdr">
+    <div class="hdr-logo"><i class="fas fa-dice-d6"></i> <span>Escalera</span></div>
+    <div id="hdr-turno-mini">
+      <div class="mini-dot" id="mini-dot"></div>
+      <span id="mini-texto">—</span>
+    </div>
+    <div class="hdr-actions">
+      <button class="hdr-btn" id="btn-historial-toggle" title="Historial"><i class="fas fa-list-ul"></i></button>
+    </div>
+  </header>
+
+  <!-- Overlay turno bot -->
+  <div id="bot-overlay" class="bot-overlay hidden">
+    <div class="bot-card">
+      <div class="bot-avatar-big" id="bot-avatar"><i class="fas fa-robot"></i></div>
+      <div class="bot-info">
+        <div class="bot-nombre" id="bot-nombre">Bot</div>
+        <div class="bot-accion" id="bot-accion">Pensando...</div>
+      </div>
+      <div class="bot-dado-wrap">
+        <div class="bot-dado" id="bot-dado"><i class="fas fa-dice-d6"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-layout">
+
+    <!-- Panel izquierdo -->
+    <aside id="panel-izq">
+      <div class="panel-sec">
+        <div class="panel-tit">JUGADORES</div>
+        <div id="lista-jugadores"></div>
+      </div>
+    </aside>
+
+    <!-- Centro -->
+    <main id="centro">
+      <div id="tablero-wrap">
+        <div id="tablero"></div>
+      </div>
+
+      <!-- Zona de control -->
+      <div id="zona-control">
+        <!-- Dado 3D (clickeable para tirar) -->
+        <div id="dado-wrap" class="dado-wrap">
+          <div id="dado-3d" class="dado-3d val-1">
+            <span class="pip p1"></span>
+            <span class="pip p2"></span>
+            <span class="pip p3"></span>
+            <span class="pip p4"></span>
+            <span class="pip p5"></span>
+            <span class="pip p6"></span>
+            <span class="pip pc"></span>
+          </div>
+          <div class="dado-sombra"></div>
+        </div>
+        <div id="dado-hint" class="dado-hint">¡Haz clic al dado!</div>
+        <!-- btn-tirar oculto, solo para compatibilidad JS -->
+        <button id="btn-tirar" class="btn-tirar" disabled style="display:none">
+          <span id="btn-tirar-label">TIRAR DADO</span>
+        </button>
+      </div>
+    </main>
+
+    <!-- Panel derecho -->
+    <aside id="panel-der">
+      <div class="panel-sec">
+        <div class="panel-tit">RANKING</div>
+        <ol id="ranking-list"></ol>
+      </div>
+      <div class="panel-sec">
+        <div class="panel-tit">HISTORIAL</div>
+        <ul id="historial-list"></ul>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- MODAL RETO -->
+<div id="modal-reto" class="modal hidden">
+  <div class="modal-reto-card">
+    <div class="reto-header">
+      <div class="reto-icono-big"><i class="fas fa-question-circle"></i></div>
+      <div class="reto-meta">
+        <span class="reto-tag cat" id="reto-cat"></span>
+        <span class="reto-tag niv" id="reto-nivel"></span>
+      </div>
+      <div class="reto-jugador" id="reto-jugador-label"></div>
+    </div>
+    <p id="reto-pregunta" class="reto-pregunta"></p>
+    <div class="reto-inp-row">
+      <input id="reto-respuesta" type="text" placeholder="Tu respuesta..."/>
+      <button id="btn-responder">Responder</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GANADOR -->
+<div id="modal-ganador" class="modal hidden">
+  <div class="modal-ganador-card">
+    <div id="confetti-area"></div>
+    <div class="ganador-trofeo"><i class="fas fa-trophy"></i></div>
+    <div class="ganador-titulo" id="ganador-nombre"></div>
+    <p class="ganador-sub">¡Llegó exacto a la casilla 50!</p>
+    <div id="ranking-final"></div>
+    <button id="btn-reiniciar"><i class="fas fa-redo-alt"></i> Jugar de nuevo</button>
+  </div>
+</div>
+
+<!-- MODAL FEEDBACK -->
+<div id="modal-feedback" class="modal hidden">
+  <div class="feedback-card">
+    <div id="feedback-emoji" class="fb-emoji"></div>
+    <p id="feedback-msg" class="fb-msg"></p>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
