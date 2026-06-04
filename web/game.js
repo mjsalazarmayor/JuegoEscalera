@@ -1,7 +1,4 @@
-/**
- * game.js — Cliente del JuegoEscalera (multi-jugador, turnos individuales)
- * CON ANIMACIONES ÉPICAS: escaleras y serpientes con animaciones personalizadas
- */
+
 
 const API = "http://localhost:8080/api";
 
@@ -10,7 +7,7 @@ const BOT_AVATARS    = ["<i class='fas fa-robot'></i>","<i class='fas fa-gamepad
 const P_EMOJIS       = ["<i class='fas fa-smile'></i>","<i class='fas fa-glasses'></i>","<i class='fas fa-star-struck'></i>","<i class='fas fa-party-horn'></i>"];
 const CONFETTI_COLS  = ["#f0c040","#ff5577","#40d080","#4d9fff","#c084fc","#fb923c"];
 
-// Mapeo de números del dado a rotaciones 3D corregidas
+
 const DADO_ROTATIONS = {
   1: "rotateX(0deg) rotateY(0deg)",
   2: "rotateX(-90deg) rotateY(0deg)",
@@ -209,23 +206,18 @@ const DADO_SPIN_MS = 1800;
 
 function animarDadoConResultado(valor) {
   return new Promise((resolve) => {
-    // Limpiar todas las clases de animación y valor previo
     dado3d.classList.remove(
       "dado-listo", "dado-agrandado", "rolling-wait", "rolling-land", "rolling", "dado-bounce"
     );
     for (let i = 1; i <= 6; i++) dado3d.classList.remove(`val-${i}`);
-    // Quitar cualquier estilo inline residual
     dado3d.style.cssText = "";
 
-    // Fase 1: sacudir mientras espera
     dado3d.classList.add("rolling-wait");
 
     setTimeout(() => {
       dado3d.classList.remove("rolling-wait");
 
-      // Fase 2: rebote de aterrizaje
       dado3d.classList.add("rolling-land");
-      // Aplicar el valor DURANTE el rebote para que al terminar ya muestre el número
       dado3d.classList.add(`val-${valor}`);
 
       setTimeout(() => {
@@ -242,7 +234,7 @@ function animarDadoConResultado(valor) {
 }
 
 // ═════════════════════════════════════════════════════════
-//  ANIMACIONES ÉPICAS DE ESCALERA Y SERPIENTE
+//  ANIMACIONES DE ESCALERA Y SERPIENTE
 // ═════════════════════════════════════════════════════════
 
 function mostrarAnimacionEscalera(jugadorNombre, desde, hasta) {
@@ -286,10 +278,10 @@ function mostrarAnimacionEscalera(jugadorNombre, desde, hasta) {
     
     document.body.appendChild(overlay);
     
-    // Forzar reflow para activar animación
+    // 
     setTimeout(() => overlay.classList.add("active"), 10);
     
-    // Activar animación del jugador escalando
+    // 
     setTimeout(() => {
       const jugador = overlay.querySelector(".jugador-escalando");
       if (jugador) jugador.classList.add("subiendo");

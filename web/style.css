@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
 :root {
-  /* Paleta */
   --bg:      #080810;
   --s0:      #0d0d1a;
   --s1:      #12121f;
@@ -22,10 +21,9 @@
   --txt2:    #8888b0;
   --txt3:    #44446a;
 
-  --esc:     #00e896;   /* escalera */
-  --ser:     #ff3a5c;   /* serpiente */
-  --ret:     #f0c040;   /* reto */
-  --meta:    #a855f7;   /* meta */
+  --esc:     #00e896;   
+  --ser:     #ff3a5c;  
+  --meta:    #a855f7;  
 
   --dado-face: #1a1a2e;
   --dado-pip:  #f0c040;
@@ -65,7 +63,7 @@ html, body {
   overflow: hidden;
 }
 
-/* Partículas flotantes (JS las genera) */
+
 .inicio-particles {
   position: absolute;
   inset: 0;

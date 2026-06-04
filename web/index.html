@@ -68,7 +68,6 @@
 <!-- ══ PANTALLA JUEGO ══ -->
 <div id="screen-juego" class="screen">
 
-  <!-- BANNER TURNO (enorme, dramático) -->
   <div id="turno-banner" class="turno-banner hidden">
     <div class="turno-banner-inner">
       <div class="turno-banner-tag" id="turno-tag">TURNO DE</div>
@@ -77,7 +76,6 @@
     </div>
   </div>
 
-  <!-- Header compacto -->
   <header id="hdr">
     <div class="hdr-logo"><i class="fas fa-dice-d6"></i> <span>Escalera</span></div>
     <div id="hdr-turno-mini">
@@ -89,7 +87,6 @@
     </div>
   </header>
 
-  <!-- Overlay turno bot -->
   <div id="bot-overlay" class="bot-overlay hidden">
     <div class="bot-card">
       <div class="bot-avatar-big" id="bot-avatar"><i class="fas fa-robot"></i></div>
@@ -121,7 +118,7 @@
 
       <!-- Zona de control -->
       <div id="zona-control">
-        <!-- Dado 3D (clickeable para tirar) -->
+        <!-- Dado 3D -->
         <div id="dado-wrap" class="dado-wrap">
           <div id="dado-3d" class="dado-3d val-1">
             <span class="pip p1"></span>
@@ -135,7 +132,7 @@
           <div class="dado-sombra"></div>
         </div>
         <div id="dado-hint" class="dado-hint">¡Haz clic al dado!</div>
-        <!-- btn-tirar oculto, solo para compatibilidad JS -->
+        
         <button id="btn-tirar" class="btn-tirar" disabled style="display:none">
           <span id="btn-tirar-label">TIRAR DADO</span>
         </button>
