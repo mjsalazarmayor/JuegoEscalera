@@ -638,10 +638,6 @@ async function procesarTurnoAutomatico() {
         return;
       }
 
-      // ✅ Si el bot ganó un turno extra, el bucle lo detecta porque
-      // data.turnoActual sigue siendo el mismo bot (estado.esBot = true)
-      // y vuelve a iterar automáticamente.
-
     } catch (err) {
       console.error(err);
       procesandoTurno = false;
@@ -697,8 +693,7 @@ async function responder() {
         // El siguiente turno es de un bot
         procesarTurnoAutomatico();
       } else if (ok) {
-        // ✅ ACIERTO: el mismo jugador humano repite — habilitar dado directamente
-        // El servidor NO avanzó el turno, turnoActual sigue siendo el mismo jugador
+        // ACIERTO: el mismo jugador humano repite
         mostrarBannerTurnoExtra(data.turnoActual, () => habilitarBoton());
       } else {
         // Fallo: turno al siguiente
@@ -815,10 +810,7 @@ function mostrarBannerTurno(data, callback) {
   }, bot ? 2000 : 2500);
 }
 
-/**
- * Banner especial para turno extra tras acierto.
- * Muestra un mensaje diferenciado antes de habilitar el dado de nuevo.
- */
+
 function mostrarBannerTurnoExtra(nombre, callback) {
   const colorJugador = obtenerColorJugador(nombre);
 
