@@ -3,6 +3,18 @@ package ordenamiento;
 import estructuras.ListaDoble;
 import modelo.Jugador;
 
+/**
+ * Implementación de MergeSort sobre ListaDoble<Jugador>.
+ * 
+ * Criterio de orden (descendente):
+ *   1. Mayor cantidad de aciertos primero.
+ *   2. En empate de aciertos, mayor posición en el tablero.
+ * 
+ * Complejidad: O(n log n) en todos los casos.
+ * Nota: buscarPorIndice() en ListaDoble es O(n), así que la división
+ * tiene un costo extra. Si el rendimiento fuera crítico, convendría
+ * convertir a arreglo antes de ordenar.
+ */
 public class MergeSort {
 
     public static ListaDoble<Jugador> ordenar(ListaDoble<Jugador> lista) {
@@ -12,6 +24,7 @@ public class MergeSort {
         return dividir(lista);
     }
 
+    /** Divide la lista por la mitad de forma recursiva hasta tener sublistas de 1 elemento. */
     private static ListaDoble<Jugador> dividir(ListaDoble<Jugador> lista) {
         if (lista.getTamanio() <= 1) {
             return lista;
@@ -36,6 +49,7 @@ public class MergeSort {
         return mezclar(izquierda, derecha);
     }
 
+    /** Fusiona dos sublistas ya ordenadas comparando aciertos y posición. */
     private static ListaDoble<Jugador> mezclar(ListaDoble<Jugador> izq,
             ListaDoble<Jugador> der) {
         ListaDoble<Jugador> resultado = new ListaDoble<>();
@@ -52,6 +66,7 @@ public class MergeSort {
                 resultado.insertarAlFinal(jugadorDer);
                 j++;
             } else {
+                // Desempate por posición en el tablero
                 if (jugadorIzq.getPosicion() >= jugadorDer.getPosicion()) {
                     resultado.insertarAlFinal(jugadorIzq);
                     i++;
@@ -62,6 +77,7 @@ public class MergeSort {
             }
         }
 
+        // Agrega los elementos restantes de la sublista que no se agotó
         while (i < izq.getTamanio()) {
             resultado.insertarAlFinal(izq.buscarPorIndice(i));
             i++;

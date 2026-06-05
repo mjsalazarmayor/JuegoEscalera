@@ -5,6 +5,15 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
+/**
+ * Árbol Binario de Búsqueda (BST) que almacena preguntas del juego.
+ * 
+ * Criterio de orden: dificultad de la pregunta (1=fácil, 3=difícil).
+ *   - Igual o menor dificultad → subárbol izquierdo (ant)
+ *   - Mayor dificultad         → subárbol derecho  (sig)
+ * 
+ * Permite buscar todas las preguntas de un nivel+categoría en O(log n) promedio.
+ */
 public class ArbolBST {
 
     private Nodo<Pregunta> raiz;
@@ -14,7 +23,7 @@ public class ArbolBST {
         cargarDesdeArchivo("preguntas.txt");
     }
 
-    // Constructor que acepta ruta personalizada
+    // Constructor que acepta ruta personalizada (útil para el servidor web)
     public ArbolBST(String rutaArchivo) {
         this.raiz = null;
         cargarDesdeArchivo(rutaArchivo);
@@ -22,8 +31,9 @@ public class ArbolBST {
 
     /**
      * Carga preguntas desde un archivo .txt con formato:
-     * dificultad|categoria|enunciado|respuesta
+     *   dificultad|categoria|enunciado|respuesta
      * Las líneas que empiecen con # son comentarios.
+     * Si el archivo no existe, carga preguntas de respaldo hardcodeadas.
      */
     private void cargarDesdeArchivo(String ruta) {
         try (BufferedReader br = new BufferedReader(new FileReader(ruta))) {
@@ -60,6 +70,7 @@ public class ArbolBST {
         }
     }
 
+    // Inserción recursiva: compara por dificultad para mantener el orden del BST
     private void insertarEn(Nodo<Pregunta> nodo, Pregunta p) {
         if (p.getDificultad() <= nodo.getDato().getDificultad()) {
             if (nodo.getAnt() == null) {
@@ -76,6 +87,10 @@ public class ArbolBST {
         }
     }
 
+    /**
+     * Busca una pregunta aleatoria que coincida con la dificultad y categoría.
+     * Recolecta todas las candidatas y elige una al azar para no repetir siempre la misma.
+     */
     public Pregunta buscar(int dificultad, String categoria) {
         ListaDoble<Pregunta> candidatas = new ListaDoble<>();
         recolectar(raiz, dificultad, categoria.toLowerCase(), candidatas);
@@ -84,6 +99,13 @@ public class ArbolBST {
         return candidatas.buscarPorIndice(indice);
     }
 
+    /**
+     * Recorre el árbol recolectando preguntas que coincidan exactamente
+     * en dificultad y categoría. Aprovecha el orden del BST para podar ramas:
+     *   - Si dif < nodo.dif  → solo explora izquierda
+     *   - Si dif > nodo.dif  → solo explora derecha
+     *   - Si dif == nodo.dif → explora ambos lados (puede haber más del mismo nivel)
+     */
     private void recolectar(Nodo<Pregunta> nodo, int dif, String cat,
                              ListaDoble<Pregunta> lista) {
         if (nodo == null) return;
@@ -101,6 +123,9 @@ public class ArbolBST {
         }
     }
 
+    /**
+     * Valida la respuesta del jugador: ignora mayúsculas/minúsculas y espacios extremos.
+     */
     public boolean validar(Pregunta pregunta, String respuestaJugador) {
         return pregunta.getRespuesta().trim().equalsIgnoreCase(respuestaJugador.trim());
     }
@@ -118,7 +143,7 @@ public class ArbolBST {
         inordenNodo(nodo.getSig());
     }
 
-    // Preguntas de respaldo si no existe el archivo
+    // Preguntas de respaldo si no existe el archivo preguntas.txt
     private void generarPreguntas() {
         insertar(new Pregunta(1, "Matematicas",    "Si 3/4 de un numero es 48, ¿cual es el numero?",                   "64"));
         insertar(new Pregunta(1, "Geografia",       "¿Cual es el rio mas largo de Sudamerica?",                          "amazonas"));

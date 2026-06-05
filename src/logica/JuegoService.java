@@ -11,6 +11,16 @@ import modelo.Jugador;
 import modelo.Pregunta;
 import ordenamiento.MergeSort;
 
+/**
+ * Servicio principal del juego (modo consola).
+ * Coordina el tablero, los turnos, el historial y la lógica de retos.
+ * 
+ * Estructuras usadas:
+ *   - TablaHash  → acceso rápido a jugadores por nombre
+ *   - Pila       → historial de jugadas (LIFO: última jugada al tope)
+ *   - ArbolBST   → preguntas organizadas por dificultad
+ *   - Turnos     → cola circular de jugadores
+ */
 public class JuegoService {
 
     private final Tablero tablero;
@@ -43,11 +53,11 @@ public class JuegoService {
         registrarJugadorReal();
         generarBots(4);
         System.out.println("\n¡El juego comienza!");
-        // tabla.mostrar();
     }
 
     private void registrarJugadorReal() {
         String nombre = "";
+        // Valida que el nombre no esté vacío ni tenga formato inválido
         while (!Validador.nombreValido(nombre)) {
             System.out.print("\nIngresa tu nombre: ");
             nombre = scanner.nextLine();
@@ -57,7 +67,7 @@ public class JuegoService {
         }
         Jugador jugador = new Jugador(nombre);
         turnos.encolarJugador(jugador);
-        tabla.insertar(jugador);
+        tabla.insertar(jugador); // guarda referencia en la hash para búsquedas O(1)
     }
 
     private void generarBots(int cantidad) {
@@ -78,6 +88,7 @@ public class JuegoService {
 
         while (ganador == null) {
             Jugador jugador = turnos.jugadorActual();
+            // Los bots se identifican por el prefijo "Bot-"
             boolean esBot = jugador.getNombreUsuario().startsWith("Bot-");
 
             System.out.println("\nTurno de: " + jugador.getNombreUsuario()
@@ -85,6 +96,7 @@ public class JuegoService {
 
             int dado = tirarDado(jugador, esBot);
 
+            // Regla: necesitas número exacto para llegar a la última casilla
             if (!Reglas.puedeMover(jugador.getPosicion(), dado, tablero.getTotalCasillas())) {
                 System.out.println("Necesitas exacto para llegar a "
                         + tablero.getTotalCasillas() + ". No te mueves.");
@@ -94,6 +106,7 @@ public class JuegoService {
 
             int nuevaPos = Reglas.calcularNuevaPos(jugador.getPosicion(), dado);
             jugador.setPosicion(nuevaPos);
+            // Registra la jugada en la pila (se muestra al final si se descomenta mostrarHistorial)
             historial.apilar(jugador.getNombreUsuario()
                     + " sacó " + dado + " → casilla " + nuevaPos);
 
@@ -105,6 +118,7 @@ public class JuegoService {
                 break;
             }
 
+            // Si el jugador acertó el reto, lanza de nuevo; si no, ya avanzó el turno dentro de evaluarRespuesta
             if (!turnoExtra) {
                 turnos.siguienteTurno();
             } else {
@@ -113,9 +127,7 @@ public class JuegoService {
         }
 
         System.out.println("\n¡" + ganador + " ganó el juego!");
-        // mostrarHistorial();
         mostrarRanking();
-        // mostrarEstado();
     }
 
     // -------------------------------------------------------
@@ -136,6 +148,11 @@ public class JuegoService {
     // -------------------------------------------------------
     // Procesar casilla
     // -------------------------------------------------------
+
+    /**
+     * Despacha el efecto de la casilla según su tipo.
+     * Retorna true si el jugador gana turno extra (acierto en reto).
+     */
     private boolean procesarCasilla(Jugador jugador, Casilla casilla, boolean esBot) {
         return switch (casilla.getTipo()) {
             case "ESCALERA" ->
@@ -152,6 +169,7 @@ public class JuegoService {
     }
 
     private boolean procesarEscalera(Jugador jugador, Casilla casilla) {
+        // El destino está almacenado en el grafo de adyacencia del tablero
         int destino = tablero.getGrafo().obtenerDestino(casilla.getNumero());
         System.out.println("¡Escalera! Subes a la casilla " + destino);
         jugador.setPosicion(destino);
@@ -168,6 +186,7 @@ public class JuegoService {
     private boolean procesarReto(Jugador jugador, boolean esBot) {
         System.out.println("¡RETO!");
         String categoria = elegirCategoria(esBot);
+        // El nivel del reto se calcula según qué tan avanzado está el jugador en el tablero
         int nivel = Reglas.calcularNivel(jugador.getPosicion(), tablero.getTotalCasillas());
         Pregunta pregunta = arbol.buscar(nivel, categoria);
 
@@ -204,12 +223,18 @@ public class JuegoService {
         return CATEGORIAS[Integer.parseInt(entrada.trim()) - 1];
     }
 
+    /**
+     * Evalúa la respuesta del jugador o del bot.
+     * - Acierto → suma punto, devuelve true (turno extra)
+     * - Fallo   → suma fallo, avanza el turno y devuelve false
+     */
     private boolean evaluarRespuesta(Jugador jugador, Pregunta pregunta, boolean esBot) {
         System.out.println("\n[" + pregunta.getCategoria() + " - Nivel " + pregunta.getDificultad() + "]");
         System.out.println("Pregunta: " + pregunta.getEnunciado());
 
         String respuesta;
         if (esBot) {
+            // El bot acierta con probabilidad 50%
             boolean acierta = random.nextBoolean();
             respuesta = acierta ? pregunta.getRespuesta() : "no se";
             System.out.println("El bot responde: " + respuesta);
@@ -232,7 +257,7 @@ public class JuegoService {
             System.out.println("Incorrecto. La respuesta era: " + pregunta.getRespuesta());
             System.out.println("Pierdes tu turno.");
             jugador.setFallos(jugador.getFallos() + 1);
-            turnos.siguienteTurno();
+            turnos.siguienteTurno(); // penalización: pierde el turno actual
             return false;
         }
     }
@@ -245,6 +270,10 @@ public class JuegoService {
         mostrarHistorialRecursivo(5);
     }
 
+    /**
+     * Desapila recursivamente para mostrar las últimas N jugadas.
+     * Usa recursión en lugar de un loop para aprovechar la pila de llamadas.
+     */
     private void mostrarHistorialRecursivo(int cantidad) {
         if (cantidad == 0) {
             return;
@@ -259,9 +288,13 @@ public class JuegoService {
     public void mostrarRanking() {
         ListaDoble<Jugador> jugadores = new ListaDoble<>();
         recolectarRecursivo(jugadores, turnos.cantidadJugadores());
-        MergeSort.mostrarRanking(jugadores);
+        MergeSort.mostrarRanking(jugadores); // ordena por aciertos desc, luego por posición
     }
 
+    /**
+     * Recolecta todos los jugadores de la cola de turnos de forma recursiva.
+     * Importante: esto rota la cola, así que solo debe llamarse al final del juego.
+     */
     private void recolectarRecursivo(ListaDoble<Jugador> lista, int restantes) {
         if (restantes == 0) {
             return;

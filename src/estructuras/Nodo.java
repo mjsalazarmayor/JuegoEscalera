@@ -2,16 +2,17 @@ package estructuras;
 
 public class Nodo <Tipo> {
 
-    private Tipo dato;
-    private Nodo <Tipo> sig;
-    private Nodo <Tipo> ant;
+    private Tipo dato;              // Valor almacenado en el nodo
+    private Nodo <Tipo> sig;        // Referencia al siguiente nodo
+    private Nodo <Tipo> ant;        // Referencia al nodo anterior
 
     public Nodo(Tipo dato) {
         this.dato = dato;
-        this.sig = null;
-        this.ant = null;
+        this.sig = null;            // Inicialmente sin siguiente
+        this.ant = null;            // Inicialmente sin anterior
     }
 
+    // Getters y Setters
     public Tipo getDato() {
         return dato;
     }

@@ -1,6 +1,8 @@
 const API = "http://localhost:8080/api";
 
+// ── Paleta de colores para fichas de jugadores (máx. 8 jugadores)
 const COLORES_FICHA  = ["#f0c040","#ff5577","#40d080","#4d9fff","#c084fc","#fb923c","#34d399","#f472b6"];
+// ── Íconos SVG para bots y jugadores humanos
 const BOT_AVATARS    = ["<i class='fas fa-robot'></i>","<i class='fas fa-gamepad'></i>","<i class='fas fa-microchip'></i>","<i class='fas fa-brain'></i>","<i class='fas fa-cogs'></i>"];
 const P_EMOJIS       = ["<i class='fas fa-smile'></i>","<i class='fas fa-glasses'></i>","<i class='fas fa-star-struck'></i>","<i class='fas fa-party-horn'></i>"];
 const CONFETTI_COLS  = ["#f0c040","#ff5577","#40d080","#4d9fff","#c084fc","#fb923c"];
@@ -9,6 +11,7 @@ const CATEGORIAS_DISPONIBLES = [
     "Matematicas", "Geografia", "Literatura", "Deportes", "Entretenimiento"
 ];
 
+// ── Rotaciones CSS 3D para cada cara del dado (1–6)
 const DADO_ROTATIONS = {
   1: "rotateX(0deg) rotateY(0deg)",
   2: "rotateX(-90deg) rotateY(0deg)",
@@ -18,15 +21,18 @@ const DADO_ROTATIONS = {
   6: "rotateX(180deg) rotateY(0deg)"
 };
 
+// ── Mapa de escaleras: casilla origen → casilla destino (sube)
 const ESCALERAS = {
   3: 19,  6: 27, 11: 41, 17: 33, 22: 37, 30: 44, 39: 48, 45: 50
 };
 
+// ── Mapa de serpientes: casilla origen → casilla destino (baja)
 const SERPIENTES = {
   25: 9, 34: 20, 36: 13, 42: 28, 47: 32, 49: 38
 };
 
 // ── DOM ───────────────────────────────────────────────────
+// Acceso rápido a elementos del DOM por ID
 const $  = id => document.getElementById(id);
 const screenInicio  = $("screen-inicio");
 const screenJuego   = $("screen-juego");
@@ -52,18 +58,20 @@ const modalGanador  = $("modal-ganador");
 const modalFeedback = $("modal-feedback");
 
 // ── Estado ────────────────────────────────────────────────
-let estado          = null;
-let nombresHumanos  = [];
-let jugadoresOrden  = [];
-let lastPositions   = {};
-let procesandoTurno = false;
-let cantJugadores   = 1;
-let dadoResultadoActual = null;
+// Variables globales que mantienen el estado de la partida en curso
+let estado          = null;       // Último estado recibido del servidor
+let nombresHumanos  = [];         // Nombres de jugadores humanos (no bots)
+let jugadoresOrden  = [];         // Orden de turno de todos los jugadores
+let lastPositions   = {};         // Posición anterior de cada jugador (para animar movimiento)
+let procesandoTurno = false;      // Semáforo: evita doble ejecución de turno
+let cantJugadores   = 1;          // Cantidad de jugadores humanos seleccionados
+let dadoResultadoActual = null;   // Valor del dado en el turno actual
 
 // ═════════════════════════════════════════════════════════
 //  PANTALLA INICIO
 // ═════════════════════════════════════════════════════════
 
+// Genera partículas decorativas flotantes en el fondo de la pantalla de inicio
 (function generarParticulas() {
   const cont = $("particles");
   if (!cont) return;
@@ -80,6 +88,7 @@ let dadoResultadoActual = null;
   }
 })();
 
+// Renderiza los campos de nombre según la cantidad de jugadores seleccionados
 function renderInputs() {
   const cont = $("jugadores-inputs");
   cont.innerHTML = "";
@@ -95,6 +104,8 @@ function renderInputs() {
   $("jug-0")?.focus();
 }
 
+// Actualiza el selector de bots disponibles según cuántos jugadores humanos hay
+// (máximo 5 jugadores en total entre humanos y bots)
 function actualizarBots() {
   const sel = $("bots-select");
   sel.innerHTML = "";
@@ -107,6 +118,7 @@ function actualizarBots() {
   }
 }
 
+// Botones de selección de cantidad de jugadores (1–4)
 document.querySelectorAll(".cnt-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".cnt-btn").forEach(b => b.classList.remove("active"));
@@ -119,10 +131,12 @@ document.querySelectorAll(".cnt-btn").forEach(btn => {
 renderInputs();
 
 btnIniciar.addEventListener("click", iniciar);
+// Permite iniciar el juego presionando Enter desde la pantalla de inicio
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && screenInicio.classList.contains("active")) iniciar();
 });
 
+// Valida los nombres ingresados y llama al servidor para iniciar la partida
 async function iniciar() {
   const nombres = [];
   for (let i = 0; i < cantJugadores; i++) {
@@ -154,11 +168,14 @@ async function iniciar() {
 //  API helpers
 // ═════════════════════════════════════════════════════════
 
+// Realiza una petición GET al servidor Java y retorna el JSON de respuesta
 async function apiGet(ep) {
   const r = await fetch(API + ep);
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
+
+// Realiza una petición POST al servidor Java con un cuerpo JSON y retorna la respuesta
 async function apiPost(ep, body = {}) {
   const r = await fetch(API + ep, {
     method: "POST",
@@ -173,6 +190,7 @@ async function apiPost(ep, body = {}) {
 //  PANTALLA JUEGO
 // ═════════════════════════════════════════════════════════
 
+// Transición de pantalla inicio → juego; renderiza tablero, jugadores y lanza el primer turno
 function iniciarPantallaJuego() {
   screenInicio.classList.remove("active");
   screenJuego.classList.add("active");
@@ -188,6 +206,7 @@ function iniciarPantallaJuego() {
   });
 }
 
+// Dispara el turno del jugador humano al hacer clic en el botón o en el dado 3D
 btnTirar.addEventListener("click", () => {
   if (estado?.ganador || procesandoTurno || estado?.esBot) return;
   ejecutarTurno();
@@ -202,27 +221,30 @@ dado3d?.addEventListener("click", () => {
 //  ANIMACIÓN DEL DADO
 // ═════════════════════════════════════════════════════════
 
-const DADO_SPIN_MS = 1800;
+const DADO_SPIN_MS = 1800; // Duración total del giro del dado en milisegundos
 
+// Anima el dado 3D hasta mostrar el valor final recibido del servidor.
+// Retorna una Promise que resuelve cuando la animación termina.
 function animarDadoConResultado(valor) {
   return new Promise((resolve) => {
+    // Limpia clases y estilos previos antes de iniciar la animación
     dado3d.classList.remove(
       "dado-listo", "dado-agrandado", "rolling-wait", "rolling-land", "rolling", "dado-bounce"
     );
     for (let i = 1; i <= 6; i++) dado3d.classList.remove(`val-${i}`);
     dado3d.style.cssText = "";
 
-    dado3d.classList.add("rolling-wait");
+    dado3d.classList.add("rolling-wait"); // Fase 1: giro aleatorio
 
     setTimeout(() => {
       dado3d.classList.remove("rolling-wait");
 
-      dado3d.classList.add("rolling-land");
+      dado3d.classList.add("rolling-land"); // Fase 2: aterrizaje en el valor correcto
       dado3d.classList.add(`val-${valor}`);
 
       setTimeout(() => {
         dado3d.classList.remove("rolling-land");
-        dado3d.classList.add("dado-agrandado");
+        dado3d.classList.add("dado-agrandado"); // Fase 3: zoom de énfasis
 
         setTimeout(() => {
           dado3d.classList.remove("dado-agrandado");
@@ -237,6 +259,8 @@ function animarDadoConResultado(valor) {
 //  ANIMACIONES DE ESCALERA Y SERPIENTE
 // ═════════════════════════════════════════════════════════
 
+// Muestra un overlay de pantalla completa con animación de subida por escalera.
+// Recibe el nombre del jugador, la casilla de inicio y la casilla de destino.
 function mostrarAnimacionEscalera(jugadorNombre, desde, hasta) {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
@@ -269,6 +293,7 @@ function mostrarAnimacionEscalera(jugadorNombre, desde, hasta) {
     document.body.appendChild(overlay);
     setTimeout(() => overlay.classList.add("active"), 10);
     setTimeout(() => { overlay.querySelector(".jugador-escalando")?.classList.add("subiendo"); }, 500);
+    // Cierra el overlay tras 4 segundos y resuelve la promesa
     setTimeout(() => {
       overlay.classList.remove("active");
       setTimeout(() => { overlay.remove(); resolve(); }, 800);
@@ -276,6 +301,8 @@ function mostrarAnimacionEscalera(jugadorNombre, desde, hasta) {
   });
 }
 
+// Muestra un overlay de pantalla completa con animación de bajada por serpiente.
+// Recibe el nombre del jugador, la casilla de inicio y la casilla de destino.
 function mostrarAnimacionSerpiente(jugadorNombre, desde, hasta) {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
@@ -309,6 +336,7 @@ function mostrarAnimacionSerpiente(jugadorNombre, desde, hasta) {
     document.body.appendChild(overlay);
     setTimeout(() => overlay.classList.add("active"), 10);
     setTimeout(() => { overlay.querySelector(".jugador-resbalando")?.classList.add("cayendo"); }, 500);
+    // Cierra el overlay tras 4 segundos y resuelve la promesa
     setTimeout(() => {
       overlay.classList.remove("active");
       setTimeout(() => { overlay.remove(); resolve(); }, 800);
@@ -316,6 +344,11 @@ function mostrarAnimacionSerpiente(jugadorNombre, desde, hasta) {
   });
 }
 
+// Orquesta el turno de un jugador humano:
+// 1. Llama al servidor para tirar el dado
+// 2. Anima el dado con el resultado real
+// 3. Anima el movimiento de la ficha (con escalera/serpiente si aplica)
+// 4. Evalúa el estado posterior: ganador, reto o siguiente turno
 async function ejecutarTurno() {
   if (procesandoTurno) return;
   procesandoTurno = true;
@@ -325,6 +358,7 @@ async function ejecutarTurno() {
   const hintEl = $("dado-hint");
   if (hintEl) hintEl.classList.add("oculto");
 
+  // Guarda las posiciones actuales antes de mover (necesario para la animación)
   if (estado?.jugadores) estado.jugadores.forEach(j => { lastPositions[j.nombre] = j.posicion; });
 
   const jugadorActual = estado?.turnoActual;
@@ -342,18 +376,21 @@ async function ejecutarTurno() {
     await animarMovimientoJugadores(data);
     actualizarEstado(data);
 
+    // Caso 1: hay un ganador → mostrar pantalla de victoria
     if (data.ganador) {
       procesandoTurno = false;
       setTimeout(() => mostrarGanador(data), 1000);
       return;
     }
 
+    // Caso 2: el jugador cayó en una casilla de reto → seleccionar categoría
     if (data.esperandoCategoria) {
       procesandoTurno = false;
       mostrarSeleccionCategoria(data);
       return;
     }
 
+    // Caso 3: ya hay una pregunta activa esperando respuesta
     if (data.esperandoRespuesta) {
       procesandoTurno = false;
       return;
@@ -361,6 +398,7 @@ async function ejecutarTurno() {
 
     procesandoTurno = false;
 
+    // Caso 4: el siguiente turno es de un bot → procesar automáticamente
     if (data.esBot) {
       setTimeout(() => procesarTurnoAutomatico(), 1000);
     } else {
@@ -377,6 +415,8 @@ async function ejecutarTurno() {
 //  SELECCIÓN DE CATEGORÍA
 // ═════════════════════════════════════════════════════════
 
+// Muestra el modal de selección de categoría cuando el jugador cae en una casilla de reto.
+// Al elegir una categoría, solicita la pregunta al servidor y abre el modal de respuesta.
 function mostrarSeleccionCategoria(data) {
   const stepCategoria = $("reto-step-categoria");
   const stepPregunta  = $("reto-step-pregunta");
@@ -389,6 +429,7 @@ function mostrarSeleccionCategoria(data) {
   if (stepPregunta) stepPregunta.classList.add("hidden");
   if (retoJugadorLabel) retoJugadorLabel.textContent = data.turnoActual ? `Reto para: ${data.turnoActual}` : "";
 
+  // Genera un botón por cada categoría disponible
   categoriaBtns.innerHTML = "";
   CATEGORIAS_DISPONIBLES.forEach(cat => {
     const btn = document.createElement("button");
@@ -429,6 +470,7 @@ function mostrarSeleccionCategoria(data) {
   abrirModal(modalReto);
 }
 
+// Muestra el modal con la pregunta del reto, ocultando el paso de selección de categoría
 function mostrarPreguntaReto(reto, jugador) {
   $("reto-cat").textContent      = reto.categoria;
   $("reto-nivel").textContent    = "Nivel " + reto.dificultad;
@@ -447,11 +489,13 @@ function mostrarPreguntaReto(reto, jugador) {
 //  ANIMACIÓN DE MOVIMIENTO
 // ═════════════════════════════════════════════════════════
 
+// Devuelve el color de ficha asignado a un jugador según su orden en la partida
 function obtenerColorJugador(nombre) {
   const index = jugadoresOrden.indexOf(nombre);
   return COLORES_FICHA[index >= 0 ? index : 0];
 }
 
+// Resalta brevemente la casilla donde se encuentra el jugador activo
 function resaltarCasillaJugador(nombre) {
   const jugador = estado?.jugadores?.find(j => j.nombre === nombre);
   if (jugador) {
@@ -463,6 +507,7 @@ function resaltarCasillaJugador(nombre) {
   }
 }
 
+// Construye la ruta de casillas entre dos posiciones para animar paso a paso
 function calcularRuta(desde, hasta) {
   if (desde === hasta) return [desde];
   const ruta = [];
@@ -472,6 +517,7 @@ function calcularRuta(desde, hasta) {
   return ruta;
 }
 
+// Calcula el centro de una casilla del tablero en coordenadas relativas al contenedor
 function getCasillaCentro(num) {
   const el = $("cas-" + num);
   if (!el) return null;
@@ -483,12 +529,15 @@ function getCasillaCentro(num) {
   };
 }
 
+// Anima una ficha flotante moviéndola casilla a casilla desde `desde` hasta `hasta`.
+// La ficha es un elemento absolutamente posicionado que se crea y se elimina en cada animación.
 async function animarFichaMovimiento(jugador, desde, hasta, colorIdx, color) {
   if (desde === hasta) return;
 
   const tableroRect = tableroEl.getBoundingClientRect();
   const colorFicha  = color || COLORES_FICHA[colorIdx] || COLORES_FICHA[0];
 
+  // Crea el elemento visual de la ficha flotante
   const flotante = document.createElement("div");
   flotante.className = "ficha-flotante";
   flotante.style.cssText = `
@@ -507,8 +556,9 @@ async function animarFichaMovimiento(jugador, desde, hasta, colorIdx, color) {
   tableroWrap.appendChild(flotante);
 
   const ruta   = calcularRuta(desde, hasta);
-  const stepMs = 150;
+  const stepMs = 150; // Milisegundos por paso de casilla
 
+  // Recorre cada paso de la ruta animando la posición con CSS transition
   for (let i = 1; i < ruta.length; i++) {
     const pos = getCasillaCentro(ruta[i]);
     if (!pos) continue;
@@ -521,6 +571,7 @@ async function animarFichaMovimiento(jugador, desde, hasta, colorIdx, color) {
     await sleep(stepMs);
   }
 
+  // Efecto de rebote al llegar a la casilla final
   flotante.style.transition = "transform .2s ease";
   flotante.style.transform  = "translate(-50%,-50%) scale(1.5)";
   await sleep(200);
@@ -529,6 +580,7 @@ async function animarFichaMovimiento(jugador, desde, hasta, colorIdx, color) {
   flotante.remove();
 }
 
+// Aplica una animación CSS temporal a la casilla especial (escalera o serpiente)
 async function animarEspecial(casilla, tipo) {
   const el = $("cas-" + casilla);
   if (!el) return;
@@ -538,12 +590,16 @@ async function animarEspecial(casilla, tipo) {
   el.classList.remove(cls);
 }
 
+// Compara posiciones anteriores y nuevas de los jugadores para determinar qué fichas
+// deben moverse. Si hay un evento especial (escalera/serpiente), muestra la animación
+// correspondiente antes de mover la ficha al destino final.
 async function animarMovimientoJugadores(data) {
   if (!data?.jugadores) return;
 
   const movimiento = data.ultimoMovimiento;
   const movimientos = [];
 
+  // Detecta qué jugadores cambiaron de posición comparando con lastPositions
   data.jugadores.forEach((j, i) => {
     const prev = lastPositions[j.nombre];
     if (prev !== undefined && prev !== j.posicion) {
@@ -558,6 +614,7 @@ async function animarMovimientoJugadores(data) {
     let casillaTrigger   = desde;
     let destinoEspecial  = hasta;
 
+    // Determina si el movimiento involucra una escalera o serpiente
     if (movimiento && movimiento.jugador === jugador.nombre) {
       if      (movimiento.evento === "escalera")  { especial = "ESCALERA"; casillaTrigger = movimiento.desde; destinoEspecial = movimiento.hasta; }
       else if (movimiento.evento === "serpiente") { especial = "SERPIENTE"; casillaTrigger = movimiento.desde; destinoEspecial = movimiento.hasta; }
@@ -567,6 +624,7 @@ async function animarMovimientoJugadores(data) {
     }
 
     if (especial) {
+      // Movimiento en dos fases: llegar a la casilla trigger, luego mostrar animación y mover al destino
       await animarFichaMovimiento(jugador.nombre, desde, casillaTrigger !== desde ? casillaTrigger : desde, colorIdx, color);
       if (especial === "ESCALERA") await mostrarAnimacionEscalera(jugador.nombre, casillaTrigger, destinoEspecial);
       else                          await mostrarAnimacionSerpiente(jugador.nombre, casillaTrigger, destinoEspecial);
@@ -586,6 +644,9 @@ async function animarMovimientoJugadores(data) {
 //  CICLO DE BOTS
 // ═════════════════════════════════════════════════════════
 
+// Ejecuta turnos automáticos consecutivos mientras el turno corresponda a un bot.
+// Muestra el overlay de bot con el nombre, ícono y resultado del dado.
+// El ciclo se detiene cuando: hay un ganador, toca un humano, o se necesita una respuesta.
 async function procesarTurnoAutomatico() {
   while (estado?.esBot && !estado?.ganador && !estado?.esperandoRespuesta && !estado?.esperandoCategoria) {
     if (procesandoTurno) return;
@@ -608,6 +669,7 @@ async function procesarTurnoAutomatico() {
     botDadoEl.classList.add("girar");
 
     try {
+      // Guarda posiciones antes de la tirada para poder animar el movimiento
       const prev = {};
       estado.jugadores?.forEach(j => { prev[j.nombre] = j.posicion; });
       Object.assign(lastPositions, prev);
@@ -617,6 +679,7 @@ async function procesarTurnoAutomatico() {
       const movimiento = data.ultimoMovimiento;
       const dadoVal    = (movimiento && movimiento.dado > 0) ? movimiento.dado : 1;
 
+      // Muestra el resultado del dado en el overlay del bot
       botDadoEl.classList.remove("girar");
       const dadosEmojis = ["","⚀","⚁","⚂","⚃","⚄","⚅"];
       botDadoEl.textContent = dadosEmojis[dadoVal];
@@ -646,6 +709,7 @@ async function procesarTurnoAutomatico() {
     }
   }
 
+  // Fin del ciclo de bots: ocultar overlay y pasar el turno al humano
   botOverlay.classList.add("hidden");
   procesandoTurno = false;
   if (!estado || estado.ganador) return;
@@ -658,8 +722,11 @@ async function procesarTurnoAutomatico() {
 // ═════════════════════════════════════════════════════════
 
 btnResponder?.addEventListener("click", responder);
+// Permite enviar la respuesta con Enter además del botón
 $("reto-respuesta")?.addEventListener("keydown", e => { if (e.key === "Enter") responder(); });
 
+// Envía la respuesta del jugador humano al servidor, muestra el feedback
+// y determina el siguiente paso (turno extra, turno siguiente o bot)
 async function responder() {
   const v = $("reto-respuesta").value.trim();
   if (!v) { shake($("reto-respuesta")); return; }
@@ -672,6 +739,7 @@ async function responder() {
 
     const ok = data.evento === "correcto";
 
+    // Muestra un feedback visual de acierto o error con la respuesta correcta
     mostrarFeedback(
       ok ? "✅" : "❌",
       ok ? "¡Correcto! Tiras de nuevo." : `Incorrecto. Era: "${data.respuestaCorrecta}"`,
@@ -712,6 +780,7 @@ async function responder() {
 //  REINICIAR
 // ═════════════════════════════════════════════════════════
 
+// Reinicia la partida: notifica al servidor, limpia el estado local y vuelve a la pantalla de inicio
 btnReiniciar?.addEventListener("click", async () => {
   try { await apiPost("/reiniciar"); } catch (_) {}
   cerrarModal(modalGanador);
@@ -733,6 +802,8 @@ btnReiniciar?.addEventListener("click", async () => {
 //  ESTADO GENERAL
 // ═════════════════════════════════════════════════════════
 
+// Actualiza el estado global y re-renderiza todos los componentes visuales.
+// También abre automáticamente los modales de reto si el servidor lo indica.
 function actualizarEstado(data) {
   estado = data;
   if (data.humanos) nombresHumanos = data.humanos;
@@ -750,11 +821,13 @@ function actualizarEstado(data) {
 
 function esHumano(n) { return nombresHumanos.includes(n); }
 
+// Habilita el dado y el botón de tirar para el jugador humano activo,
+// aplica el color del jugador y muestra el hint de interacción
 function habilitarBoton() {
   btnTirar.disabled = false;
   dado3d.style.cssText = "";
   dado3d.classList.remove("dado-listo", "rolling-wait", "rolling-land", "dado-agrandado");
-  void dado3d.offsetWidth;
+  void dado3d.offsetWidth; // Fuerza reflow para reiniciar la animación CSS
   dado3d.classList.add("dado-listo");
 
   const jugadorActual = estado?.turnoActual;
@@ -769,6 +842,7 @@ function habilitarBoton() {
   }
 }
 
+// Actualiza el indicador de turno en el header (mini-dot y nombre del jugador)
 function actualizarHdr() {
   if (!estado) return;
   const nombre = estado.turnoActual || "";
@@ -788,6 +862,8 @@ function actualizarHdr() {
 
 let bannerTimer = null;
 
+// Muestra el banner central con el nombre del jugador cuyo turno comienza.
+// Se oculta automáticamente tras 2–2.5 segundos y ejecuta el callback.
 function mostrarBannerTurno(data, callback) {
   if (!data || data.ganador || data.esperandoRespuesta || data.esperandoCategoria) { callback?.(); return; }
   const nombre = data.turnoActual;
@@ -810,7 +886,8 @@ function mostrarBannerTurno(data, callback) {
   }, bot ? 2000 : 2500);
 }
 
-
+// Muestra el banner de turno extra cuando el jugador acierta un reto
+// (el mismo jugador vuelve a tirar)
 function mostrarBannerTurnoExtra(nombre, callback) {
   const colorJugador = obtenerColorJugador(nombre);
 
@@ -830,6 +907,7 @@ function mostrarBannerTurnoExtra(nombre, callback) {
   }, 2500);
 }
 
+// Inicia la animación de salida del banner y ejecuta el callback al terminar
 function ocultarBannerConAnimacion(cb) {
   turnoInner?.classList.add("saliendo");
   setTimeout(() => { turnoBannerOcultar(); cb?.(); }, 400);
@@ -842,15 +920,18 @@ function turnoBannerOcultar() { turnoBanner.classList.add("hidden"); turnoInner?
 //  TABLERO
 // ═════════════════════════════════════════════════════════
 
+// Renderiza el tablero de 50 casillas con el patrón serpentina (izq→der / der→izq).
+// Coloca las fichas de los jugadores en sus casillas actuales.
 function renderTablero() {
   if (!estado?.tablero) return;
+  // Agrupa los índices de jugadores por posición para dibujar fichas apiladas
   const posJ = {};
   estado.jugadores?.forEach((j, i) => { (posJ[j.posicion] ||= []).push(i); });
 
   tableroEl.innerHTML = "";
   for (let fila = 4; fila >= 0; fila--) {
     const base = fila * 10;
-    const ltr  = fila % 2 === 0;
+    const ltr  = fila % 2 === 0; // Fila par: izquierda a derecha; impar: derecha a izquierda
     for (let col = 0; col < 10; col++) {
       const colR = ltr ? col : (9 - col);
       const n    = base + colR + 1;
@@ -864,6 +945,7 @@ function renderTablero() {
         + (d.tipo !== "NORMAL" ? `<span class="icono">${icons[d.tipo]||""}</span>` : "")
         + (n === 50 ? `<span class="icono">🏁</span>` : "");
 
+      // Si hay jugadores en esta casilla, dibuja sus fichas
       if (posJ[n]) {
         const fd = document.createElement("div");
         fd.className = "fichas";
@@ -885,6 +967,8 @@ function renderTablero() {
 //  PANEL JUGADORES
 // ═════════════════════════════════════════════════════════
 
+// Renderiza las tarjetas de jugadores en el panel lateral con:
+// posición actual, barra de progreso, aciertos y fallos
 function renderJugadores() {
   if (!estado?.jugadores) return;
   const cont = $("lista-jugadores");
@@ -916,6 +1000,7 @@ function renderJugadores() {
   actualizarHistorial();
 }
 
+// Obtiene del servidor los últimos 10 eventos del historial y los muestra en el panel
 async function actualizarHistorial() {
   try {
     const data = await apiGet("/historial");
@@ -929,6 +1014,7 @@ async function actualizarHistorial() {
   } catch (_) {}
 }
 
+// Obtiene el ranking actual del servidor y lo renderiza con medallas para los primeros 3
 async function renderRanking() {
   try {
     const data = await apiGet("/ranking");
@@ -950,6 +1036,7 @@ async function renderRanking() {
 //  MODALES
 // ═════════════════════════════════════════════════════════
 
+// Muestra el modal de feedback (acierto/error) y lo cierra automáticamente tras 2 segundos
 function mostrarFeedback(emoji, msg, tipo) {
   $("feedback-emoji").textContent = emoji;
   $("feedback-msg").textContent   = msg;
@@ -959,6 +1046,7 @@ function mostrarFeedback(emoji, msg, tipo) {
   setTimeout(() => cerrarModal(modalFeedback), 2000);
 }
 
+// Muestra el modal de ganador con el ranking final y lanza la animación de confeti
 async function mostrarGanador(data) {
   $("ganador-nombre").textContent = data.ganador.toUpperCase();
   const colorGanador = obtenerColorJugador(data.ganador);
@@ -986,6 +1074,7 @@ async function mostrarGanador(data) {
   lanzarConfetti();
 }
 
+// Genera 50 piezas de confeti con colores, tamaños y tiempos aleatorios
 function lanzarConfetti() {
   const area = $("confetti-area");
   area.innerHTML = "";
@@ -1002,15 +1091,19 @@ function lanzarConfetti() {
   }
 }
 
+// Muestra un modal quitándole la clase "hidden"
 function abrirModal(m)  { m.classList.remove("hidden"); }
+// Oculta un modal añadiéndole la clase "hidden"
 function cerrarModal(m) { m.classList.add("hidden"); }
 
+// Permite cerrar el modal de reto haciendo clic en el fondo oscuro
 modalReto?.addEventListener("click", e => { if (e.target === modalReto) cerrarModal(modalReto); });
 
 // ═════════════════════════════════════════════════════════
 //  HELPERS
 // ═════════════════════════════════════════════════════════
 
+// Genera una descripción textual del movimiento de un bot para mostrar en el overlay
 function descMovimiento(data, nombre, prev) {
   const j = data.jugadores?.find(j => j.nombre === nombre);
   if (!j) return "Movió su ficha";
@@ -1023,11 +1116,13 @@ function descMovimiento(data, nombre, prev) {
   return `Se quedó en la casilla ${c}`;
 }
 
+// Pausa la ejecución asíncrona por `ms` milisegundos
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// Aplica una animación de sacudida a un input inválido para indicar error al usuario
 function shake(el) {
   if (!el) return;
   el.style.animation = "none";
-  el.offsetWidth;
+  el.offsetWidth; // Fuerza reflow para reiniciar la animación
   el.style.animation = "shake .4s ease";
 }

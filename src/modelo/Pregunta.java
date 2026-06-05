@@ -2,10 +2,10 @@ package modelo;
 
 public class Pregunta {
 
-    private int dificultad;
-    private String enunciado;
-    private String respuesta;
-    private String categoria;
+    private int dificultad;     // 1, 2 o 3 (corresponde al nivel del tablero)
+    private String enunciado;   // Texto de la pregunta
+    private String respuesta;   // Respuesta correcta
+    private String categoria;   // Ej: "Historia", "Ciencia", etc.
 
     public Pregunta(int dificultad, String categoria, String enunciado, String respuesta) {
         this.dificultad = dificultad;
@@ -14,6 +14,7 @@ public class Pregunta {
         this.respuesta = respuesta;
     }
 
+    // Getters
     public int getDificultad() {
         return dificultad;
     }
