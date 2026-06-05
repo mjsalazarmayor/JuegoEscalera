@@ -2,6 +2,11 @@
 
 Juego de Serpientes y Escaleras desarrollado en Java con arquitectura cliente-servidor. Incluye multijugador, bots, preguntas de reto y estructuras de datos implementadas manualmente.
 
+## Integrantes
+
+* Maria Jose Salazar Lopez
+* Julian Felipe Perez Veru
+* 
 ## Requisitos
 
 * Java 11 o superior
@@ -107,3 +112,7 @@ servidor.GameServer
 ```
 
 Este componente levanta el servidor HTTP, sirve la interfaz web y expone los endpoints necesarios para el juego.
+
+## IA utilizada:
+
+Se utilizó la IA de Claude anthropic para depurar, solucionar errores y en la parte visual del juego.
